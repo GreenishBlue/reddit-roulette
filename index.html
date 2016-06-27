@@ -3,6 +3,7 @@
 <head>
   <title>Roulette for Reddit</title>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Check out random subreddits with this fun app!">
   <meta name="author" content="Cameron Brown">
   <meta name="keywords" content="Reddit,Roulette,JavaScript,Game,Fun">
@@ -106,8 +107,8 @@
       </div>
     </main>
     <footer>
-      <a href="https://www.github.com/thinkallabout/reddit-roulette">Get the source on GitHub</a>
-      <a href="https://www.twitter.com/thinkallabout">Follow me on Twitter (@thinkallabout)</a>
+      <a href="https://www.github.com/thinkallabout/reddit-roulette" onclick="window.app.Analytics.sendOutboundClickEvent('http://www.example.com');">Get the source on GitHub</a>
+      <a href="https://www.twitter.com/thinkallabout" onclick="window.app.Analytics.sendOutboundClickEvent('https://www.twitter.com/thinkallabout');">Follow me on Twitter (@thinkallabout)</a>
     </footer>
   </div>
   <script>
@@ -152,8 +153,21 @@
         } else {
           clearInterval(window.app.spinner);
           window.app.spinner = null;
+          window.app.Analytics.sendSubredditChosenEvent(window.app.getCurrentSubreddit());
         }
+        window.app.Analytics.sendWheelSpinEvent(isSpinning);
         window.app.UI.setSpinning(isSpinning);
+      };
+      
+      /**
+       * Get the currently selected subreddit.
+       * 
+       * @returns {string} - subreddit
+       */
+      window.app.getCurrentSubreddit = function() {
+        var subredditUrl = document.querySelector('#url');
+        var subreddit = subredditUrl.innerHTML;
+        window.app.Analytics.sendSubredditChosenEvent(subreddit);
       };
       
       /**
@@ -184,6 +198,9 @@
         ui.init = function() {
           ui.setSpinning(false);
           spinButton.addEventListener('click', ui.spinClicked);
+          subredditUrl.addEventListener('click', function(e) {
+            window.app.Analytics.sendSubredditClickEvent(e.target.href);
+          });
         };
         
         var spinClickedCallback = null;
@@ -248,6 +265,46 @@
       
       window.app.Analytics = (function() {
         var analytics = {};
+      
+        analytics.sendSubredditChosenEvent = function(subreddit) {
+          ga('send', 'event', {
+            eventCategory: 'Subreddit',
+            eventAction: 'chosen',
+            eventLabel: subreddit
+          });
+        };
+        
+        analytics.sendWheelSpinEvent = function(isSpinning) {
+          var action = '';
+          if(isSpinning) {
+            action = 'start';
+          } else {
+            action = 'stop';
+          }
+          ga('send', 'event', {
+            eventCategory: 'Roulette Wheel',
+            eventAction: action,
+            eventLabel: 'Wheel Spin'
+          });
+        };
+        
+        analytics.sendSubredditClickEvent = function(href) {
+          ga('send', 'event', {
+            eventCategory: 'Outbound Link (Subreddit)',
+            eventAction: 'click',
+            eventLabel: href,
+            transport: 'beacon'
+          });
+        };
+        
+        analytics.sendOutboundClickEvent = function(href) {
+          ga('send', 'event', {
+            eventCategory: 'Outbound Link',
+            eventAction: 'click',
+            eventLabel: href,
+            transport: 'beacon'
+          });
+        };
         
         return analytics;
       }());
@@ -260,6 +317,11 @@
         api.init = function(readyCallback, errorCallback) {
           api.load(function(resp) {
             subreddits = resp.split(',');
+            for(var i = 0; i < subreddits.length; i++) {
+              var sub = subreddits[i];
+              subreddits[i] = sub.replace(/\n|\r/g, "");
+              console.log(subreddits[i]);
+            }
             readyCallback();
           }, errorCallback);
         };
