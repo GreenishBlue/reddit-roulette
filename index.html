@@ -10,21 +10,24 @@
       font-size: 14px;
       text-align: center;
     }
-    
-    #container {
-      
-    }
 
     #spinner {
-      padding-bottom: 32px;
+      pointer-events: none;
+      margin-top: 32px;
+      margin-bottom: 32px;
       width: 360px;
       height: 360px;
+      -webkit-animation: spin 2s linear infinite;
+      -moz-animation: spin 2s linear infinite;
+      -o-animation: spin 2s linear infinite;
+      animation: spin 2s linear infinite;
     }
     
-    .spinning {
-      -webkit-animation: spin 4s linear infinite;
-      -moz-animation: spin 4s linear infinite;
-      animation: spin 4s linear infinite;
+    .noanimation {
+      -webkit-animation: none !important;
+      -moz-animation: none !important;
+      -o-animation: none !important;
+      animation: none !important;
     }
         
     @-moz-keyframes spin { 100% { -moz-transform: rotate(360deg); } }
@@ -91,7 +94,7 @@
       Roulette for Reddit
     </header>
     <main>
-      <img id="spinner" src="roulette_wheel.svg">
+      <img id="spinner" src="roulette_wheel.svg" class="noanimation">
       <br>
       <input id="spin" type="button" value="Spin the wheel!">
       <div id="result">Selected Subreddit</div>
@@ -170,6 +173,7 @@
       window.app.UI = (function() {
         var ui = {};
         
+        var spinner = document.querySelector('#spinner');
         var spinButton = document.querySelector('#spin');
         var subredditText = document.querySelector('#result');
         var subredditUrl = document.querySelector('#url');
@@ -217,8 +221,10 @@
         ui.setSpinning = function(isSpinning) {
           if(isSpinning) {
             spinButton.value = SPIN_BUTTON_ACTIVE_VALUE;
+            spinner.className = '';
           } else {
             spinButton.value = SPIN_BUTTON_DEFAULT_VALUE;
+            spinner.className = 'noanimation';
           }
         };
         
