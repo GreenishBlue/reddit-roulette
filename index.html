@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+<head>
+  <title>Roulette for Reddit</title>
+  <meta charset="utf-8">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      text-align: center;
+    }
+    
+    #container {
+      
+    }
+    
+    #container header {
+      background-color: #cee3f8;
+      font-size: 26px;
+      padding: 24px 0;
+      margin-bottom: 16px;
+    }
+    
+    #container main {
+      background-color: #fff;
+      margin-bottom: 16px;
+    }
+    
+    #container footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      background-color: #eee;
+      padding: 16px 0;
+    }
+    
+    #container footer a {
+      text-decoration: none;
+      color: #369;
+      padding-right: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <header>
+      Roulette for Reddit
+    </header>
+    <main>
+      <input id="spin" type="button" value="Spin the wheel!">
+      <div id="result">Selected Subreddit</div>
+      <div>
+        <a id="url" href="https://www.reddit.com/r/">https://www.reddit.com/r/..</a>
+      </div>
+    </main>
+    <footer>
+      <a href="https://www.github.com/thinkallabout/reddit-roulette">Get the source on GitHub</a>
+      <a href="https://www.twitter.com/thinkallabout">Follow me on Twitter (@thinkallabout)</a>
+    </footer>
+  </div>
+  <script>
+    (function() {
+      'use strict';
+      
+      // Global app namespace.
+      window.app = window.app || {};
+      
+      /**
+       * Initialise the app.
+       */
+      window.app.init = function() {
+        console.log('app.init');
+
+        window.app.UI.init();
+        window.app.UI.setLoading(true);
+        window.app.spinner = null;
+        
+        window.app.API.init(function() {
+          window.app.UI.setSpinClicked(window.app.toggleSpinning);
+          window.app.UI.setLoading(false);
+        });
+      };
+      
+      /**
+       * Toggles the spinning state.
+       */
+      window.app.toggleSpinning = function() {
+        var isSpinning = window.app.isSpinning();
+        window.app.setSpinning(!isSpinning);
+      };
+      
+      /**
+       * Set the app spinning.
+       * 
+       * @param {boolean} isSpinning
+       */
+      window.app.setSpinning = function(isSpinning) {
+        if(isSpinning) {
+          window.app.spinner = window.setInterval(window.app.spin, 50);
+        } else {
+          clearInterval(window.app.spinner);
+          window.app.spinner = null;
+        }
+        window.app.UI.setSpinning(isSpinning);
+      };
+      
+      /**
+       * Is the spinner active.
+       * 
+       * @returns {boolean} - spinner state.
+       */
+      window.app.isSpinning = function() {
+        return !(window.app.spinner == null || window.app.spinner == undefined);
+      };
+      
+      /**
+       * Run each spin (every 50ms).
+       */
+      window.app.spin = function() {
+        var newSubreddit = window.app.API.getRandom();
+        window.app.UI.setSubredditName(newSubreddit);
+      };
+      
+      window.app.UI = (function() {
+        var ui = {};
+        
+        var spinButton = document.querySelector('#spin');
+        var subredditText = document.querySelector('#result');
+        var subredditUrl = document.querySelector('#url');
+        
+        ui.init = function() {
+          ui.setSpinning(false);
+          spinButton.addEventListener('click', ui.spinClicked);
+        };
+        
+        var spinClickedCallback = null;
+        var SPIN_BUTTON_DEFAULT_VALUE = spinButton.defaultValue;
+        var SPIN_BUTTON_ACTIVE_VALUE = 'Stop!';
+        
+        ui.spinClicked = function(e) {
+          if(spinClickedCallback != null) {
+            spinClickedCallback();
+          }
+        };
+        
+        /**
+         * Set the callback for the spin button clicked.
+         * 
+         * @param {object} callback
+         */
+        ui.setSpinClicked = function(callback) {
+          spinClickedCallback = callback;
+        };
+        
+        /**
+         * Set app loading ui.
+         */
+        ui.setLoading = function(isLoading) {
+          if(isLoading) {
+            console.log('loading');
+          } else {
+            console.log('loaded');
+          }
+        };
+        
+        /**
+         * Set the wheel spinning or not.
+         * 
+         * @param {boolean} spinning.
+         */
+        ui.setSpinning = function(isSpinning) {
+          if(isSpinning) {
+            spinButton.value = SPIN_BUTTON_ACTIVE_VALUE;
+          } else {
+            spinButton.value = SPIN_BUTTON_DEFAULT_VALUE;
+          }
+        };
+        
+        /**
+         * Set the wheel spinning or not.
+         * 
+         * @param {string} subreddit - The name of the SubReddit.
+         */
+        ui.setSubredditName = function(subreddit) {
+          var url = 'https://www.reddit.com/r/' + subreddit;
+          subredditText.innerHTML = '/r/' + subreddit;
+          subredditUrl.href = url;
+          subredditUrl.innerHTML = url;
+        };
+        
+        return ui;
+      }());
+      
+      window.app.Analytics = (function() {
+        var analytics = {};
+        
+        return analytics;
+      }());
+      
+      window.app.API = (function() {
+        var api = {};
+        
+        var subreddits = [];
+        
+        api.init = function(readyCallback, errorCallback) {
+          api.load(function(resp) {
+            subreddits = resp.split(',');
+            readyCallback();
+          }, errorCallback);
+        };
+        
+        /**
+         * Executes an XMLHttpRequest to the network and retrieves
+         * the subreddits CSV.
+         */
+        api.load = function(doneCallback, errorCallback) {
+          var xmlhttp = new XMLHttpRequest();
+          xmlhttp.onreadystatechange = function() {
+            if (xmlhttp.readyState == XMLHttpRequest.DONE) {
+              if (xmlhttp.status == 200) {
+                doneCallback(xmlhttp.responseText);
+              } else {
+                errorCallback();
+              }
+            }
+          };
+          xmlhttp.open('GET', 'top-subreddits.csv', true);
+          xmlhttp.send();
+        };
+        
+        api.getRandom = function() {
+          var rand = Math.floor(Math.random() * subreddits.length);
+          return subreddits[rand];
+        };
+        
+        return api;
+      }());
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        window.app.init();
+      });
+    })(window);
+  </script>
+</body>
+</html>
